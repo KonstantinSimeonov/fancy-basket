@@ -29,28 +29,22 @@ func main() {
 			// TODO: pagination
 			var ps []fb.Product
 			db.Find(&ps)
-			ps_json, err := json.Marshal(ps)
-			if err != nil {
-				panic(err)
-			}
-
-			w.WriteHeader(514)
-
-			w.Write([]byte(ps_json))
+			json.NewEncoder(w).Encode(&ps)
 		})
 
 		r.Post("/", func (w http.ResponseWriter, r *http.Request) {
 			var p fb.Product
-			err := json.NewDecoder(r.Body).Decode(&p)
-			if err != nil {
-				panic(err)
+			
+			if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+				w.WriteHeader(422)
+				fmt.Println(err)
+				return
 			}
 
-			db.Create(&p)
+			createdProduct := db.Create(&p)
 
 			w.WriteHeader(201)
-			p_json, _ := json.Marshal(&p)
-			w.Write(p_json)
+			json.NewEncoder(w).Encode(createdProduct)
 		})
 	})
 
