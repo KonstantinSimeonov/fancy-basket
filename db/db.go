@@ -69,6 +69,7 @@ func CreateUser (db *gorm.DB) func(http.ResponseWriter, *http.Request) {
 
 		user.Password = string(pass)
 		createdUser := db.Create(&user)
+		w.WriteHeader(201)
 
 		json.NewEncoder(w).Encode(createdUser)
 	}
