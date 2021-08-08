@@ -12,11 +12,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type role string
+
+const (
+	customer role = "customer"
+	admin role = "admin"
+)
+
 type Category struct {
 	gorm.Model
 	Name string `gorm:"not null;size:255;unique"`
 }
-
 
 type Product struct {
 	gorm.Model
@@ -31,6 +37,16 @@ type User struct {
 	Name string `gorm:"not null;size:255"`
 	Password string
 	Email string `gorm:"not null;unique;size:255"`
+	Role role `sql:"type:role" gorm:"not null;default:'customer'"`
+}
+
+type Order struct {
+	gorm.Model
+	ProductID string
+	Product Product
+	UserID string
+	User User
+	Qty int `gorm:"not null"`
 }
 
 func GetDB() *gorm.DB {
@@ -48,7 +64,21 @@ func GetDB() *gorm.DB {
 	)
 
 	fmt.Println("Running migrations...")
-	db.AutoMigrate(Product{}, User{}, Category{})
+	db.Exec(`
+		DO $$
+		BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role') THEN
+				create type role AS ENUM ('admin', 'customer');
+			END IF;
+		END
+		$$;
+	`)
+	db.AutoMigrate(
+		Product{},
+		User{},
+		Category{},
+		Order{},
+	)
 	if err != nil {
 		panic(err)
 	}
