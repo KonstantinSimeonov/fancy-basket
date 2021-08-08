@@ -2,6 +2,9 @@ package main
 
 import (
 	_ "github.com/joho/godotenv/autoload"
+
+	"fmt"
+	"os"
 	"net/http"
 	"encoding/json"
 
@@ -48,5 +51,7 @@ func main() {
 		})
 	})
 
-	http.ListenAndServe(":4000", r)
+	port := os.Getenv("API_PORT")
+	fmt.Printf("Starting up server on port %s\n", port)
+	http.ListenAndServe(":" + port, r)
 }
