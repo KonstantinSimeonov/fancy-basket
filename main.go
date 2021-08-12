@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt"
+	"golang.org/x/crypto/bcrypt"
 
 	fb "fancybasket/db"
 )
@@ -45,9 +46,16 @@ func main() {
 
 			var user fb.User
 			db.Find(&user, "email = ?", l.Email)
+			err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(l.Password))
+
+			if err != nil {
+				fmt.Println(err)
+				w.WriteHeader(403)
+				w.Write([]byte("get outta here"))
+				return
+			}
 
 			token, err := CreateToken(user.ID)
-			fmt.Println(err)
 			w.Write([]byte(token))
 		})
 	})
