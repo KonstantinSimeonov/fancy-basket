@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/jinzhu/gorm"
 
 	fb "fancybasket/db"
 )
@@ -30,6 +31,24 @@ func CreateToken(user_id uint) (string, error) {
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, at_claims)
 	token, err := at.SignedString([]byte(os.Getenv("ACCESS_SECRET")))
 	return token, err
+}
+
+func GetUserFromRequest(r *http.Request, db *gorm.DB) (*fb.User, error) {
+	tokenString := r.Header.Get("Authorization")
+
+	if tokenString == "" {
+		return nil, nil
+	}
+
+	token, err := jwt.Parse(tokenString, func (token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("ACCESS_SECRET")), nil
+	})
+
+	claims, _ := token.Claims.(jwt.MapClaims)
+	var u fb.User
+	db.Find(&u, "id = ?", claims["user_id"])
+	fmt.Println(claims["user_id"])
+	return &u, err
 }
 
 func main() {
@@ -76,6 +95,13 @@ func main() {
 
 		r.Post("/", func (w http.ResponseWriter, r *http.Request) {
 			var p fb.Product
+
+			u, _ := GetUserFromRequest(r, db)
+
+			if u.Role != fb.Admin {
+				w.WriteHeader(403)
+				return
+			}
 			
 			if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 				w.WriteHeader(422)

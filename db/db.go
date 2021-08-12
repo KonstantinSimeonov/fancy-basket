@@ -12,11 +12,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type role string
+type Role string
 
 const (
-	customer role = "customer"
-	admin role = "admin"
+	Customer Role = "customer"
+	Admin Role = "admin"
 )
 
 type Category struct {
@@ -37,7 +37,7 @@ type User struct {
 	Name string `gorm:"not null;size:255"`
 	Password string
 	Email string `gorm:"not null;unique;size:255"`
-	Role role `sql:"type:role" gorm:"not null;default:'customer'"`
+	Role Role `sql:"type:role" gorm:"not null;default:'Customer'"`
 }
 
 type Order struct {
