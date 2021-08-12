@@ -7,12 +7,29 @@ import (
 	"os"
 	"net/http"
 	"encoding/json"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/golang-jwt/jwt"
 
 	fb "fancybasket/db"
 )
+
+type LoginAttempt struct {
+	Email string `json:"email"`
+	Password string `json:"password"`
+}
+
+func CreateToken(user_id uint) (string, error) {
+	at_claims := jwt.MapClaims{}
+	at_claims["authorized"] = true
+	at_claims["user_id"] = user_id
+	at_claims["exp"] = time.Now().Add(time.Minute * 60).Unix()
+	at := jwt.NewWithClaims(jwt.SigningMethodHS256, at_claims)
+	token, err := at.SignedString([]byte(os.Getenv("ACCESS_SECRET")))
+	return token, err
+}
 
 func main() {
 	db := fb.GetDB();
@@ -20,6 +37,20 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+
+	r.Route("/tokens", func (r chi.Router) {
+		r.Post("/", func (w http.ResponseWriter, r *http.Request) {
+			var l LoginAttempt
+			json.NewDecoder(r.Body).Decode(&l)
+
+			var user fb.User
+			db.Find(&user, "email = ?", l.Email)
+
+			token, err := CreateToken(user.ID)
+			fmt.Println(err)
+			w.Write([]byte(token))
+		})
+	})
 
 	r.Route("/users", func (r chi.Router) {
 		r.Post("/", func (w http.ResponseWriter, r *http.Request) {
