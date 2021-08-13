@@ -53,6 +53,34 @@ func GetUserFromRequest(r *http.Request, db *gorm.DB) (*fb.User, error) {
 	return &u, err
 }
 
+func AllowRoles (db *gorm.DB, roles ...fb.Role) func (http.Handler) http.Handler {
+	return func (next http.Handler) http.Handler {
+		return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+			u, _ := GetUserFromRequest(r, db)
+
+			if u == nil {
+				w.WriteHeader(403)
+				return
+			}
+
+			has_role := false
+			for _, v := range roles {
+				if v == u.Role {
+					has_role = true
+					break
+				}
+			}
+
+			if !has_role {
+				w.WriteHeader(403)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 func Clamp (low, high, val int64) int64 {
 	if val < low {
 		return low
@@ -128,16 +156,8 @@ func main() {
 			json.NewEncoder(w).Encode(&ps)
 		})
 
-		r.Post("/", func (w http.ResponseWriter, r *http.Request) {
+		r.With(AllowRoles(db, fb.Admin)).Post("/", func (w http.ResponseWriter, r *http.Request) {
 			var p fb.Product
-
-			u, _ := GetUserFromRequest(r, db)
-
-			if u.Role != fb.Admin {
-				w.WriteHeader(403)
-				return
-			}
-			
 			if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 				w.WriteHeader(422)
 				fmt.Println(err)
