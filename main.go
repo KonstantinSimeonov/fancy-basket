@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"encoding/json"
 	"time"
+	"strconv"
+	"context"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -51,6 +53,37 @@ func GetUserFromRequest(r *http.Request, db *gorm.DB) (*fb.User, error) {
 	return &u, err
 }
 
+func Clamp (low, high, val int64) int64 {
+	if val < low {
+		return low
+	}
+
+	if val > high {
+		return high
+	}
+
+	return val
+}
+
+func Pagination (next http.Handler) http.Handler {
+	return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		page, _ := strconv.ParseInt(query.Get("page"), 10, 64)
+		if page < 0 {
+			page = 0
+		}
+		size, _ := strconv.ParseInt(query.Get("size"), 10, 64)
+		size = Clamp(20, 100, size)
+		if size <= 0 {
+			size = 50
+		}
+
+		ctx := context.WithValue(r.Context(), "page", page)
+		ctx = context.WithValue(ctx, "size", size)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 func main() {
 	db := fb.GetDB();
 	defer db.Close()
@@ -86,10 +119,12 @@ func main() {
 	})
 
 	r.Route("/products", func (r chi.Router) {
-		r.Get("/", func (w http.ResponseWriter, r *http.Request) {
+		r.With(Pagination).Get("/", func (w http.ResponseWriter, r *http.Request) {
 			// TODO: pagination
+			page := r.Context().Value("page").(int64)
+			size := r.Context().Value("size").(int64)
 			var ps []fb.Product
-			db.Find(&ps)
+			db.Offset(page * size).Limit(size).Order("created_at desc").Find(&ps)
 			json.NewEncoder(w).Encode(&ps)
 		})
 
