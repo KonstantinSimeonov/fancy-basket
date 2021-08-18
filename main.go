@@ -10,6 +10,7 @@ import (
 	"time"
 	"strconv"
 	"context"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -151,8 +152,13 @@ func main() {
 			// TODO: pagination
 			page := r.Context().Value("page").(int64)
 			size := r.Context().Value("size").(int64)
+			category := r.URL.Query()["category_ids"]
 			var ps []fb.Product
-			db.Offset(page * size).Limit(size).Order("created_at desc").Find(&ps)
+			q := db.Offset(page * size).Limit(size).Order("created_at desc")
+			if len(category) > 0 {
+				q = q.Where("category_id IN (?)", strings.Split(category[0], ","))
+			}
+			q.Find(&ps)
 			json.NewEncoder(w).Encode(&ps)
 		})
 
