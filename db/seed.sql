@@ -12,8 +12,8 @@ declare
 begin
     foreach x in array ids loop
         for i in 1..15 loop
-            insert into products (created_at, updated_at, name, price, category_id)
-            values (now(), now(), 'neshto si ' || i, i * 2.2 * x, x);
+            insert into products (created_at, updated_at, name, price, category_id, stock)
+            values (now(), now(), 'neshto si ' || i, i * 2.2 * x, x, 10);
         end loop;
     end loop;
 end; $$

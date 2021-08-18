@@ -30,6 +30,7 @@ type Product struct {
 	Price float64 `gorm:"not null"`
 	CategoryID string
 	Category Category
+	Stock uint64 `gorm:"not null,default:0"`
 }
 
 type User struct {
