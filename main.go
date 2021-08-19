@@ -26,7 +26,7 @@ type LoginAttempt struct {
 	Password string `json:"password"`
 }
 
-func CreateToken(user_id uint) (string, error) {
+func CreateToken(user_id string) (string, error) {
 	at_claims := jwt.MapClaims{}
 	at_claims["authorized"] = true
 	at_claims["user_id"] = user_id
@@ -36,22 +36,30 @@ func CreateToken(user_id uint) (string, error) {
 	return token, err
 }
 
-func GetUserFromRequest(r *http.Request, db *gorm.DB) (*fb.User, error) {
+func GetUserIdFromRequest(r *http.Request) string {
 	tokenString := r.Header.Get("Authorization")
 
 	if tokenString == "" {
-		return nil, nil
+		return ""
 	}
 
-	token, err := jwt.Parse(tokenString, func (token *jwt.Token) (interface{}, error) {
+	token, _ := jwt.Parse(tokenString, func (token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("ACCESS_SECRET")), nil
 	})
 
 	claims, _ := token.Claims.(jwt.MapClaims)
+	return claims["user_id"].(string)
+}
+
+func GetUserFromRequest(r *http.Request, db *gorm.DB) (*fb.User, error) {
+	user_id := GetUserIdFromRequest(r)
+	if user_id == "" {
+		return nil, nil
+	}
+
 	var u fb.User
-	db.Find(&u, "id = ?", claims["user_id"])
-	fmt.Println(claims["user_id"])
-	return &u, err
+	db.Find(&u, "id = ?", user_id)
+	return &u, db.Error
 }
 
 func AllowRoles (db *gorm.DB, roles ...fb.Role) func (http.Handler) http.Handler {
@@ -144,6 +152,38 @@ func main() {
 	r.Route("/users", func (r chi.Router) {
 		r.Post("/", func (w http.ResponseWriter, r *http.Request) {
 			fb.CreateUser(db)(w, r)
+		})
+
+		r.Route("/{user_id}/orders", func (r2 chi.Router) {
+			r2.Post("/", func (w http.ResponseWriter, r *http.Request) {
+				type PlaceOrder struct {
+					Qty int
+					ProductID string
+				}
+
+				jwt_user_id := GetUserIdFromRequest(r)
+				param_user_id := chi.URLParam(r, "user_id")
+
+				if jwt_user_id != param_user_id {
+					w.WriteHeader(403)
+					return
+				}
+
+				var po PlaceOrder
+				json.NewDecoder(r.Body).Decode(&po)
+				if (po.Qty <= 0) {
+					w.WriteHeader(400)
+					return
+				}
+
+				result := db.Create(&fb.Order{
+					ProductID: po.ProductID,
+					UserID: jwt_user_id,
+					Qty: po.Qty,
+				})
+				w.WriteHeader(201)
+				json.NewEncoder(w).Encode(&result)
+			})
 		})
 	})
 

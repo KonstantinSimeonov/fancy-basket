@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"encoding/json"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
@@ -19,13 +20,20 @@ const (
 	Admin Role = "admin"
 )
 
+type Base struct {
+	ID string `gorm:"primary_key;type:uuid;not null;default:uuid_generate_v4()"`
+	CreatedAt time.Time `gorm:"not null"`
+	UpdatedAt time.Time `gorm:"not null"`
+	DeletedAt *time.Time `sql:"index"`
+}
+
 type Category struct {
-	gorm.Model
+	Base
 	Name string `gorm:"not null;size:255;unique"`
 }
 
 type Product struct {
-	gorm.Model
+	Base
 	Name string `gorm:"not null;size:255"`
 	Price float64 `gorm:"not null"`
 	CategoryID string
@@ -34,15 +42,15 @@ type Product struct {
 }
 
 type User struct {
-	gorm.Model
+	Base
 	Name string `gorm:"not null;size:255"`
 	Password string
 	Email string `gorm:"not null;unique;size:255"`
-	Role Role `sql:"type:role" gorm:"not null;default:'Customer'"`
+	Role Role `sql:"type:role" gorm:"not null;default:'customer'"`
 }
 
 type Order struct {
-	gorm.Model
+	Base
 	ProductID string
 	Product Product
 	UserID string
@@ -65,6 +73,9 @@ func GetDB() *gorm.DB {
 	)
 
 	fmt.Println("Running migrations...")
+	db.Exec(`
+		CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+	`)
 	db.Exec(`
 		DO $$
 		BEGIN

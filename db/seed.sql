@@ -6,14 +6,14 @@ insert into categories (created_at, updated_at, name) values
 
 do $$
 declare
-    ids integer[] := array(select id from categories);
-    x int;
+    ids uuid[] := array(select id from categories);
+    x uuid;
     name text;
 begin
     foreach x in array ids loop
         for i in 1..15 loop
             insert into products (created_at, updated_at, name, price, category_id, stock)
-            values (now(), now(), 'neshto si ' || i, i * 2.2 * x, x, 10);
+            values (now(), now(), 'neshto si ' || i, i * 2.2, x, 10);
         end loop;
     end loop;
 end; $$
