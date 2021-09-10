@@ -21,41 +21,41 @@ const (
 )
 
 type Base struct {
-	ID string `gorm:"primary_key;type:uuid;not null;default:uuid_generate_v4()"`
-	CreatedAt time.Time `gorm:"not null"`
-	UpdatedAt time.Time `gorm:"not null"`
-	DeletedAt *time.Time `sql:"index"`
+	ID string `json:"id" gorm:"primary_key;type:uuid;not null;default:uuid_generate_v4()"`
+	CreatedAt time.Time `json:"createdAt" gorm:"not null"`
+	UpdatedAt time.Time `json:"updatedAt" gorm:"not null"`
+	DeletedAt *time.Time `json:"deletedAt" sql:"index"`
 }
 
 type Category struct {
 	Base
-	Name string `gorm:"not null;size:255;unique"`
+	Name string `json:"name" gorm:"not null;size:255;unique"`
 }
 
 type Product struct {
 	Base
-	Name string `gorm:"not null;size:255"`
-	Price float64 `gorm:"not null"`
-	CategoryID string
-	Category Category
-	Stock uint64 `gorm:"not null,default:0"`
+	Name string `json:"name" gorm:"not null;size:255"`
+	Price float64 `json:"price" gorm:"not null"`
+	CategoryID string `json:"categoryId"`
+	Category Category `json:"-"`
+	Stock uint64 `json:"stock" gorm:"not null,default:0"`
 }
 
 type User struct {
 	Base
-	Name string `gorm:"not null;size:255"`
-	Password string
-	Email string `gorm:"not null;unique;size:255"`
-	Role Role `sql:"type:role" gorm:"not null;default:'customer'"`
+	Name string `json:"name" gorm:"not null;size:255"`
+	Password string `json:"-"`
+	Email string `json:"email" gorm:"not null;unique;size:255"`
+	Role Role `json:"role" sql:"type:role" gorm:"not null;default:'customer'"`
 }
 
 type Order struct {
 	Base
-	ProductID string
-	Product Product
-	UserID string
-	User User
-	Qty int `gorm:"not null"`
+	ProductID string `json:"productId"`
+	Product Product `json:"-"`
+	UserID string `json:"userId"`
+	User User `json:"-"`
+	Qty int `json:"qty" gorm:"not null"`
 }
 
 func GetDB() *gorm.DB {
