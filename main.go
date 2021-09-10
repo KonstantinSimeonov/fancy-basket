@@ -171,8 +171,22 @@ func main() {
 
 				var po PlaceOrder
 				json.NewDecoder(r.Body).Decode(&po)
-				if (po.Qty <= 0) {
-					w.WriteHeader(400)
+				if po.Qty <= 0 || po.ProductID == "" {
+					http.Error(w, "Bad order placement", 400)
+					return
+				}
+
+				var product fb.Product
+				res := db.First(&product, "id = (?)", po.ProductID)
+				fmt.Println(product)
+
+				if res.Error != nil {
+					http.Error(w, "Product with id " + po.ProductID + " not found", 400)
+					return
+				}
+
+				if product.Stock < uint64(po.Qty) {
+					http.Error(w, "Insufficient stock", 400)
 					return
 				}
 
