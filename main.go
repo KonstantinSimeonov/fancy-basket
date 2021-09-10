@@ -196,7 +196,7 @@ func main() {
 					Qty: po.Qty,
 				})
 				w.WriteHeader(201)
-				json.NewEncoder(w).Encode(&result)
+				json.NewEncoder(w).Encode(&result.Value)
 			})
 
 			r2.Get("/", func (w http.ResponseWriter, r *http.Request) {
