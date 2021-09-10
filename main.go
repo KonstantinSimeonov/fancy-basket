@@ -184,12 +184,26 @@ func main() {
 				w.WriteHeader(201)
 				json.NewEncoder(w).Encode(&result)
 			})
+
+			r2.Get("/", func (w http.ResponseWriter, r *http.Request) {
+				jwt_user_id := GetUserIdFromRequest(r)
+				param_user_id := chi.URLParam(r, "user_id")
+
+				if jwt_user_id != param_user_id {
+					w.WriteHeader(403)
+					return
+				}
+
+				var orders []fb.Order
+				db.Where("user_id IN (?)", param_user_id).Find(&orders)
+
+				json.NewEncoder(w).Encode(&orders)
+			})
 		})
 	})
 
 	r.Route("/products", func (r chi.Router) {
 		r.With(Pagination).Get("/", func (w http.ResponseWriter, r *http.Request) {
-			// TODO: pagination
 			page := r.Context().Value("page").(int64)
 			size := r.Context().Value("size").(int64)
 			category := r.URL.Query()["category_ids"]
